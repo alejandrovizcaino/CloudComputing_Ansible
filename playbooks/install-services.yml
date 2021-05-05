@@ -1,0 +1,82 @@
+--- 
+- 
+  become: true
+  hosts: webservers
+  tasks: 
+    - 
+      apt: name={{ item }} update_cache=yes state=latest 
+      loop: ['apache2', 'mysql-client', 'php', 'php-mysql']
+      name: "Installing apache and others"
+    - 
+      name: "Ensure apache starts"
+      service: "name=apache2 state=started enabled=yes"
+- 
+  become: true
+  hosts: dbservers
+  vars_files: 
+    - ../vars/default.yml
+
+  tasks: 
+    # UFW Configuration
+    - name: "UFW - Allow HTTP on port {{ http_port }}"
+      ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+    - 
+      apt: name={{ item }} update_cache=yes state=latest 
+      loop: [ 'mysql-server', 'python3-pymysql', 'php-mysql']
+      name: "Installing mySQL"
+    
+    - name: Configure mysql file /etc/mysql/mysql.conf.d/mysqld.cnf
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: ^bind-address
+        line: 'bind-address = 0.0.0.0'
+
+    - 
+      name: Ensure mysql starts
+      service: "name=mysql state=started enabled=true"
+
+    - 
+      name: restart mysql
+      service: "name=mysql state=restarted enabled=true"
+
+    - 
+      mysql_user: 
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: root
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        password: "{{ mysql_root_password }}"
+      name: "Sets the root password"
+    - 
+      mysql_user: 
+        host_all: true
+        login_password: "{{ mysql_root_password }}"
+        login_user: root
+        name: ""
+        state: absent
+      name: "Removes all anonymous user accounts"
+    - 
+      mysql_db: 
+        login_password: "{{ mysql_root_password }}"
+        login_user: root
+        name: test
+        state: absent
+      name: "Removes the MySQL test database"
+    - 
+      mysql_user:
+        login_password: "{{ mysql_root_password }}"
+        login_user: root 
+        name: "{{ app_user }}"
+        password: "{{ mysql_root_password }}"
+        host: '0.0.0.0'
+        priv: '*.*:ALL,GRANT'
+        state: present
+      name: "Creates database user"
+
+
+
+
+

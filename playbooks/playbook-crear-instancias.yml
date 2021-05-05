@@ -1,0 +1,208 @@
+--- 
+- 
+  gather_facts: false
+  hosts: localhost
+  name: "Create an instance"
+  tasks: 
+    - 
+      gcp_compute_disk: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        name: disk-instance
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        size_gb: 10
+        source_image: projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts
+        state: present
+        zone: "{{ zone }}"
+      name: "create a disk"
+      register: disk
+    - 
+      gcp_compute_network: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        auto_create_subnetworks: 'true'
+        name: network-instance
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      name: "create a network"
+      register: network
+    - 
+      gcp_compute_address: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        name: address-instance
+        project: "{{ gcp_project }}"
+        region: "{{ region }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      name: "create a address"
+      register: address
+    - 
+      gcp_compute_instance: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        disks: 
+          - 
+            auto_delete: true
+            boot: true
+            source: "{{ disk }}"
+        machine_type: n1-standard-1
+        name: webserver
+        network_interfaces: 
+          - 
+            access_configs: 
+              - 
+                name: "External NAT"
+                nat_ip: "{{ address }}"
+                type: ONE_TO_ONE_NAT
+            network: "{{ network }}"
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+        tags:
+            items: 
+              - ssh
+              - http
+        zone: "{{ zone }}"
+      name: "create a instance"
+      register: instance  
+  vars: 
+    gcp_cred_file: /home/alex/MI-CC2021/ansible/credenciales-ansible.json
+    gcp_cred_kind: serviceaccount
+    gcp_project: "947072184123"
+    region: europe-west1
+    zone: europe-west1-b
+
+- 
+  gather_facts: false
+  hosts: localhost
+  name: "Create an instance"
+  tasks: 
+    - 
+      gcp_compute_disk: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        name: disk-instance2
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        size_gb: 10
+        source_image: projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts
+        state: present
+        zone: "{{ zone }}"
+      name: "create a disk"
+      register: disk2
+    - 
+      gcp_compute_network: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        auto_create_subnetworks: 'true'
+        name: network-instance
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      name: "create a network"
+      register: network
+    - 
+      gcp_compute_address: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        name: address-instance2
+        project: "{{ gcp_project }}"
+        region: "{{ region }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      name: "create a address"
+      register: address2
+    - 
+      gcp_compute_instance: 
+        auth_kind: "{{ gcp_cred_kind }}"
+        disks: 
+          - 
+            auto_delete: true
+            boot: true
+            source: "{{ disk2 }}"
+        machine_type: n1-standard-1
+        name: database
+        network_interfaces: 
+          - 
+            access_configs: 
+              - 
+                name: "External NAT"
+                nat_ip: "{{ address2 }}"
+                type: ONE_TO_ONE_NAT
+            network: "{{ network }}"
+        project: "{{ gcp_project }}"
+        scopes: 
+          - "https://www.googleapis.com/auth/compute"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+        tags:
+          items: 
+            - ssh
+            - mysql
+        zone: "{{ zone }}"
+      name: "create a instance"
+      register: instance2
+    -
+      gcp_compute_firewall: 
+        allowed: 
+          - 
+            ip_protocol: tcp
+            ports: 
+              - "22"
+        auth_kind: serviceaccount
+        name: "allow-ssh"
+        network: "{{ network }}"
+        project: "{{ gcp_project }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+        target_tags: 
+          - ssh
+      name: "Crear un firewall de ssh"
+    -
+      gcp_compute_firewall: 
+        allowed: 
+          - 
+            ip_protocol: tcp
+            ports: 
+              - "3306"
+        auth_kind: serviceaccount
+        name: "allow-mysql"
+        network: "{{ network }}"
+        project: "{{ gcp_project }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+        target_tags: 
+          - mysql
+      name: "Crear un firewall de mysql"
+    -
+      gcp_compute_firewall: 
+        allowed: 
+          - 
+            ip_protocol: tcp
+            ports: 
+              - "80"
+        auth_kind: serviceaccount
+        name: "allow-http"
+        network: "{{ network }}"
+        project: "{{ gcp_project }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+        target_tags: 
+          - http
+      name: "Crear un firewall de http"
+  vars: 
+    gcp_cred_file: /home/alex/MI-CC2021/ansible/credenciales-ansible.json
+    gcp_cred_kind: serviceaccount
+    gcp_project: "947072184123"
+    region: europe-west1
+    zone: europe-west1-b

@@ -1,0 +1,27 @@
+--- 
+- 
+  become: true
+  hosts: dbservers
+  tasks: 
+    - 
+      mysql_db: 
+        login_password: "{{ mysql_root_password }}"
+        login_user: root
+        name: testdb
+        state: present
+      name: "create a new database"
+    - 
+      copy: 
+        dest: /tmp/dump.sql
+        src: mysql-databases/dump.sql
+      name: "add sample data to database"
+    - 
+      mysql_db: 
+        login_password: "{{ mysql_root_password }}"
+        login_user: root
+        name: testdb
+        state: import
+        target: /tmp/dump.sql
+      name: "insert sample data into database"
+  vars_files: 
+    - ../vars/default.yml

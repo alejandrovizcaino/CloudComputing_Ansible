@@ -1,0 +1,7 @@
+---
+mysql_root_password: "1234"
+app_user: "alex"
+http_host: "35.195.74.116"
+http_conf: "your_domain.conf"
+http_port: "80"
+disable_default: true
